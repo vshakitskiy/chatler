@@ -1,0 +1,61 @@
+// pkg/proto/chat/chat.proto
+syntax = "proto3";
+
+package chat;
+
+option go_package = "chat.service/api/proto;chat_v1";
+
+import "google/protobuf/timestamp.proto"; // Для временных меток
+
+// Сервис чата
+service ChatService {
+    // Создание нового чата
+    // Подразумевается, что пользователь, вызвавший метод, автоматически добавляется
+    rpc CreateChat(CreateChatRequest) returns (CreateChatResponse);
+
+    // Подключение к существующему чату для получения сообщений
+    // Используем серверный стрим для отправки сообщений клиенту в реальном времени
+    rpc ConnectChat(ConnectChatRequest) returns (stream ChatMessage);
+
+    // Отправка сообщения в чат
+    rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+
+    // Можно добавить методы для получения истории, добавления/удаления участников и т.д.
+}
+
+message CreateChatRequest {
+    string name = 1; // Необязательное имя чата
+    repeated string participant_user_ids = 2; // ID других пользователей для добавления в чат
+}
+
+message CreateChatResponse {
+    string chat_id = 1; // ID созданного чата
+}
+
+message ConnectChatRequest {
+    string chat_id = 1; // К какому чату подключиться
+}
+
+// Сообщение в чате (используется в стриме ConnectChat и для SendMessage)
+message ChatMessage {
+    string message_id = 1;
+    string chat_id = 2;
+    string user_id = 3; // ID отправителя
+    string username = 4; // Имя отправителя (для удобства отображения)
+    string text = 5;
+    google.protobuf.Timestamp timestamp = 6;
+}
+
+message SendMessageRequest {
+    string chat_id = 1;
+    string text = 2;
+    // user_id отправителя будет взят из аутентификационного контекста (interceptor)
+}
+
+message SendMessageResponse {
+    string message_id = 1; // ID отправленного сообщения
+    google.protobuf.Timestamp timestamp = 2; // Время отправки на сервере
+}
+
+// --- Не забудьте сгенерировать код после создания этого файла ---
+// protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative pkg/proto/chat/chat.proto

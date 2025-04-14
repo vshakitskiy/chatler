@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package auth;
+
+import "google/protobuf/wrappers.proto";
+
+option go_package = "auth.service/api/proto;auth_v1";
+
+service UserService {
+    rpc CreateUser(CreateUserRequest) returns (UserResponse);
+    rpc GetUser(GetUserRequest) returns (UserResponse);
+    rpc UpdateUser(UpdateUserRequest) returns (UserResponse);
+    rpc DeleteUser(DeleteUserRequest) returns (UserResponse);
+}
+
+service AuthService {
+    rpc Login(LoginRequest) returns (LoginResponse);
+    rpc GetAccessToken(RefreshTokenRequest) returns (AccessTokenResponse);
+}
+
+service AccessService {
+    rpc Check(CheckAccessRequest) returns (CheckAccessResponse);
+}
+
+message CreateUserRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message UpdateUserRequest {
+    google.protobuf.StringValue user_id = 1;
+    google.protobuf.StringValue username = 2;
+    google.protobuf.StringValue password = 3;
+}
+
+message DeleteUserRequest {
+    string user_id = 1;
+}
+
+message GetUserRequest {
+    string user_id = 1;
+}
+message UserResponse {
+    string user_id = 1;
+    string username = 2;
+}
+
+message LoginRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message LoginResponse {
+    string access_token = 1;
+    string refresh_token = 2;
+    string user_id = 3;
+}
+
+message RefreshTokenRequest {
+    string refresh_token = 1;
+}
+
+message AccessTokenResponse {
+    string access_token = 1;
+}
+
+message CheckAccessRequest {
+    string access_token = 1;
+}
+
+message CheckAccessResponse {
+    bool is_valid = 1;
+    string user_id = 2;
+}
