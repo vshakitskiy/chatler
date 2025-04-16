@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	m "auth.service/internal/models"
+	"auth.service/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
@@ -28,7 +28,7 @@ func NewSessionRepository(db *sqlx.DB) *SqliteSessionRepository {
 	return &SqliteSessionRepository{db: db}
 }
 
-func (r *SqliteUserRepository) CreateUser(ctx Context, user *m.User) error {
+func (r *SqliteUserRepository) CreateUser(ctx Context, user *repository.User) error {
 	op := "repository.UserRepository.CreateUser"
 
 	if user.ID == "" {
@@ -41,7 +41,7 @@ func (r *SqliteUserRepository) CreateUser(ctx Context, user *m.User) error {
 
 	query := `
 		INSERT INTO users (id, username, password_hash, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
+		VALUES (?, ?, ?, ?, ?)
 	`
 
 	_, err := r.db.ExecContext(
@@ -49,7 +49,7 @@ func (r *SqliteUserRepository) CreateUser(ctx Context, user *m.User) error {
 		query,
 		user.ID,
 		user.Username,
-		user.Password,
+		user.PasswordHash,
 		user.CreatedAt,
 		user.UpdatedAt,
 	)
@@ -63,14 +63,14 @@ func (r *SqliteUserRepository) CreateUser(ctx Context, user *m.User) error {
 func (r *SqliteUserRepository) UserByID(
 	ctx Context,
 	id string,
-) (*m.User, error) {
+) (*repository.User, error) {
 	op := "repository.UserRepository.UserByID"
-	user := new(m.User)
+	user := new(repository.User)
 
 	query := `
 		SELECT id, username, password_hash, created_at, updated_at
 		FROM users
-		WHERE id = $1
+		WHERE id = ?
 	`
 
 	err := r.db.GetContext(ctx, user, query, id)
@@ -84,14 +84,14 @@ func (r *SqliteUserRepository) UserByID(
 func (r *SqliteUserRepository) UserByUsername(
 	ctx Context,
 	username string,
-) (*m.User, error) {
+) (*repository.User, error) {
 	op := "repository.UserRepository.UserByUsername"
-	user := new(m.User)
+	user := new(repository.User)
 
 	query := `
 		SELECT id, username, password_hash, created_at, updated_at
 		FROM users
-		WHERE username = $1
+		WHERE username = ?
 	`
 
 	err := r.db.GetContext(ctx, user, query, username)
@@ -104,22 +104,22 @@ func (r *SqliteUserRepository) UserByUsername(
 
 func (r *SqliteUserRepository) UpdateUser(
 	ctx Context,
-	user *m.User,
+	user *repository.User,
 ) error {
 	op := "repository.UserRepository.UpdateUser"
 
 	user.UpdatedAt = time.Now()
 	query := `
 		UPDATE users
-		SET username = $1, password_hash = $2, updated_at = $3
-		WHERE id = $4
+		SET username = ?, password_hash = ?, updated_at = ?
+		WHERE id = ?
 	`
 
 	res, err := r.db.ExecContext(
 		ctx,
 		query,
 		user.Username,
-		user.Password,
+		user.PasswordHash,
 		user.UpdatedAt,
 		user.ID,
 	)
@@ -147,7 +147,7 @@ func (r *SqliteUserRepository) DeleteUser(
 
 	query := `
 		DELETE FROM users
-		WHERE id = $1
+		WHERE id = ?
 	`
 
 	res, err := r.db.ExecContext(ctx, query, id)
@@ -169,18 +169,21 @@ func (r *SqliteUserRepository) DeleteUser(
 
 func (r *SqliteSessionRepository) CreateSession(
 	ctx Context,
-	session *m.Session,
+	session *repository.Session,
 ) error {
 	op := "repository.SessionRepository.CreateSession"
 
 	if session.ID == "" {
 		session.ID = uuid.New().String()
 	}
-	session.CreatedAt = time.Now()
+
+	now := time.Now()
+	session.CreatedAt = now
+	session.ExpiresAt = now.Add(24 * time.Hour)
 
 	query := `
 		INSERT INTO sessions (id, user_id, refresh_token, expires_at, created_at)
-		VALUES ($1, $2, $3, $4, $5)
+		VALUES (?, ?, ?, ?, ?)
 	`
 
 	_, err := r.db.ExecContext(
@@ -202,14 +205,14 @@ func (r *SqliteSessionRepository) CreateSession(
 func (r *SqliteSessionRepository) GetByRefreshToken(
 	ctx Context,
 	refreshToken string,
-) (*m.Session, error) {
+) (*repository.Session, error) {
 	op := "repository.SessionRepository.SessionByID"
-	session := new(m.Session)
+	session := new(repository.Session)
 
 	query := `
 		SELECT id, user_id, refresh_token, expires_at, created_at
 		FROM sessions
-		WHERE refresh_token = $1
+		WHERE refresh_token = ?
 	`
 	err := r.db.GetContext(ctx, session, query, refreshToken)
 	if err != nil {
@@ -227,7 +230,7 @@ func (r *SqliteSessionRepository) DeleteSession(
 
 	query := `
 		DELETE FROM sessions
-		WHERE id = $1
+		WHERE id = ?
 	`
 	res, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
@@ -252,7 +255,7 @@ func (r *SqliteSessionRepository) DeleteByUserID(
 	op := "repository.SessionRepository.DeleteByUserID"
 	query := `
 		DELETE FROM sessions
-		WHERE user_id = $1
+		WHERE user_id = ?
 	`
 
 	res, err := r.db.ExecContext(ctx, query, userID)
