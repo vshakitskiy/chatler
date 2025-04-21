@@ -2,7 +2,13 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
+)
+
+var (
+	ErrUserNotFound      = errors.New("user not found")
+	ErrUserAlreadyExists = errors.New("user already exists")
 )
 
 type User struct {

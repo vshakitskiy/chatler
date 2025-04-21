@@ -30,6 +30,7 @@ type AuthServiceImpl struct {
 func NewAuthService(
 	userRepo repository.UserRepository,
 	sessionRepo repository.SessionRepository,
+	jwtSecret []byte,
 	accessTTL time.Duration,
 	refreshTTL time.Duration,
 ) *AuthServiceImpl {

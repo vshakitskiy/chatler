@@ -86,7 +86,12 @@ func (r *SqliteUserRepository) UserByUsername(
 
 	err := r.db.GetContext(ctx, user, query, username)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		switch {
+		case err.Error() == "sql: no rows in result set":
+			return nil, repository.ErrUserNotFound
+		default:
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
 	}
 
 	return user, nil

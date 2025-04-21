@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"auth.service/internal/repository"
@@ -24,7 +25,12 @@ func (s *UserServiceImpl) CreateUser(
 
 	existingUser, err := s.userRepo.UserByUsername(ctx, username)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
+		switch {
+		case errors.Is(err, repository.ErrUserNotFound):
+			break
+		default:
+			return "", fmt.Errorf("%s: %w", op, err)
+		}
 	}
 	if existingUser != nil {
 		return "", ErrUserAlreadyExists
@@ -78,16 +84,25 @@ func (s *UserServiceImpl) UpdateUser(
 		return ErrUserNotFound
 	}
 
+	isChanged := false
+
 	if username != "" && user.Username != username {
 		existingUser, err := s.userRepo.UserByUsername(ctx, username)
+
 		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			switch err {
+			case repository.ErrUserNotFound:
+				break
+			default:
+				return fmt.Errorf("%s: %w", op, err)
+			}
 		}
 		if existingUser != nil {
 			return ErrUserAlreadyExists
 		}
 
 		user.Username = username
+		isChanged = true
 	}
 
 	if password != "" {
@@ -96,10 +111,13 @@ func (s *UserServiceImpl) UpdateUser(
 			return fmt.Errorf("failed to hash password: %w", err)
 		}
 		user.PasswordHash = hashedPassword
+		isChanged = true
 	}
 
-	if err := s.userRepo.UpdateUser(ctx, user); err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+	if isChanged {
+		if err := s.userRepo.UpdateUser(ctx, user); err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
 	}
 
 	return nil
