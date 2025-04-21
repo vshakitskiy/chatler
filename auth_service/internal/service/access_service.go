@@ -1,24 +1,14 @@
-package access_service
+package service
 
 import (
 	"context"
-	"errors"
-
-	"auth.service/internal/service"
-)
-
-var (
-	ErrInvalidToken       = errors.New("Invalid token")
-	ErrExpiredToken       = errors.New("Expired token")
-	ErrTokenNotFound      = errors.New("Token not found")
-	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
 type AccessServiceImpl struct {
-	authService service.AuthService
+	authService AuthService
 }
 
-func NewAccessService(authService service.AuthService) *AccessServiceImpl {
+func NewAccessService(authService AuthService) *AccessServiceImpl {
 	return &AccessServiceImpl{
 		authService: authService,
 	}
@@ -28,8 +18,6 @@ func (s *AccessServiceImpl) Check(
 	ctx context.Context,
 	accessToken string,
 ) (bool, string, error) {
-	// op := "AccessService.CheckAccess"
-
 	claims, err := s.authService.ValidateToken(ctx, accessToken)
 	if err != nil {
 		if err == ErrExpiredToken {

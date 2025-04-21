@@ -1,19 +1,11 @@
-package user_service
+package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"auth.service/internal/repository"
-	"auth.service/internal/service"
 	"golang.org/x/crypto/bcrypt"
-)
-
-var (
-	ErrUserAlreadyExists  = errors.New("user already exists")
-	ErrUserNotFound       = errors.New("user not found")
-	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
 type UserServiceImpl struct {
@@ -55,7 +47,7 @@ func (s *UserServiceImpl) CreateUser(
 	return user.ID, nil
 }
 
-func (s *UserServiceImpl) GetUserByID(ctx context.Context, userID string) (*service.User, error) {
+func (s *UserServiceImpl) GetUserByID(ctx context.Context, userID string) (*User, error) {
 	op := "UserService.UserByID"
 
 	user, err := s.userRepo.UserByID(ctx, userID)
@@ -66,12 +58,16 @@ func (s *UserServiceImpl) GetUserByID(ctx context.Context, userID string) (*serv
 		return nil, ErrUserNotFound
 	}
 
-	return &service.User{
+	return &User{
 		ID:       user.ID,
 		Username: user.Username,
 	}, nil
 }
-func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID, username, password string) error {
+
+func (s *UserServiceImpl) UpdateUser(
+	ctx context.Context,
+	userID, username, password string,
+) error {
 	op := "UserService.UpdateUser"
 
 	user, err := s.userRepo.UserByID(ctx, userID)
@@ -87,7 +83,7 @@ func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID, username, pass
 		if err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}
-		if existingUser == nil {
+		if existingUser != nil {
 			return ErrUserAlreadyExists
 		}
 

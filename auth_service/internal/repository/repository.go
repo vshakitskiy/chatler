@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-type Context = context.Context
-
 type User struct {
 	ID           string    `db:"id"`
 	Username     string    `db:"username"`
@@ -24,16 +22,16 @@ type Session struct {
 }
 
 type UserRepository interface {
-	CreateUser(ctx Context, user *User) error
-	UserByID(ctx Context, id string) (*User, error)
-	UserByUsername(ctx Context, username string) (*User, error)
-	UpdateUser(ctx Context, user *User) error
-	DeleteUser(ctx Context, id string) error
+	CreateUser(ctx context.Context, user *User) error
+	UserByID(ctx context.Context, id string) (*User, error)
+	UserByUsername(ctx context.Context, username string) (*User, error)
+	UpdateUser(ctx context.Context, user *User) error
+	DeleteUser(ctx context.Context, id string) error
 }
 
 type SessionRepository interface {
-	CreateSession(ctx Context, session *Session) error
-	GetByRefreshToken(ctx Context, refreshToken string) (*Session, error)
-	DeleteSession(ctx Context, id string) error
-	DeleteByUserID(ctx Context, userID string) error
+	CreateSession(ctx context.Context, session *Session) error
+	GetByRefreshToken(ctx context.Context, refreshToken string) (*Session, error)
+	DeleteSession(ctx context.Context, id string) error
+	DeleteByUserID(ctx context.Context, userID string) error
 }

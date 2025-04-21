@@ -38,8 +38,6 @@ func (h *UserServiceHandler) CreateUser(
 		switch err {
 		case service.ErrUserAlreadyExists:
 			return nil, status.Error(codes.AlreadyExists, "user already exists")
-		case service.ErrUserNotFound:
-			return nil, status.Error(codes.NotFound, "user not found")
 		default:
 			return nil, status.Error(codes.Internal, "internal server error")
 		}

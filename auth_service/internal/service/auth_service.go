@@ -1,25 +1,16 @@
-package auth_service
+package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"time"
 
 	"auth.service/internal/repository"
-	"auth.service/internal/service"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-)
-
-var (
-	ErrInvalidToken       = errors.New("Invalid token")
-	ErrExpiredToken       = errors.New("Expired token")
-	ErrTokenNotFound      = errors.New("Token not found")
-	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
 type CustomClaims struct {
@@ -61,7 +52,7 @@ func NewAuthService(
 func (s *AuthServiceImpl) Login(
 	ctx context.Context,
 	username, password string,
-) (*service.TokenPair, error) {
+) (*TokenPair, error) {
 	op := "AuthService.Login"
 
 	user, err := s.userRepo.UserByUsername(ctx, username)
@@ -76,17 +67,18 @@ func (s *AuthServiceImpl) Login(
 		return nil, ErrInvalidCredentials
 	}
 
-	u := &service.User{
+	u := &User{
 		ID:       user.ID,
 		Username: user.Username,
 	}
+
 	return s.createTokens(ctx, u)
 }
 
 func (s *AuthServiceImpl) createTokens(
 	ctx context.Context,
-	user *service.User,
-) (*service.TokenPair, error) {
+	user *User,
+) (*TokenPair, error) {
 	op := "AuthService.createTokens"
 
 	now := time.Now()
@@ -108,7 +100,7 @@ func (s *AuthServiceImpl) createTokens(
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &service.TokenPair{
+	return &TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		UserID:       user.ID,
@@ -116,7 +108,7 @@ func (s *AuthServiceImpl) createTokens(
 }
 
 func (s *AuthServiceImpl) generateAccessToken(
-	user *service.User,
+	user *User,
 	now time.Time,
 ) (string, error) {
 	claims := CustomClaims{
@@ -143,7 +135,7 @@ func (s *AuthServiceImpl) generateAccessToken(
 func (s *AuthServiceImpl) RefreshTokens(
 	ctx context.Context,
 	refreshToken string,
-) (*service.TokenPair, error) {
+) (*TokenPair, error) {
 	op := "AuthService.RefreshTokens"
 
 	session, err := s.sessionRepo.GetByRefreshToken(ctx, refreshToken)
@@ -162,7 +154,7 @@ func (s *AuthServiceImpl) RefreshTokens(
 
 	_ = s.sessionRepo.DeleteSession(ctx, session.ID)
 
-	u := &service.User{
+	u := &User{
 		ID:       user.ID,
 		Username: user.Username,
 	}
@@ -173,7 +165,7 @@ func (s *AuthServiceImpl) RefreshTokens(
 func (s *AuthServiceImpl) ValidateToken(
 	ctx context.Context,
 	accessToken string,
-) (*service.TokenClaims, error) {
+) (*TokenClaims, error) {
 	token, err := jwt.ParseWithClaims(
 		accessToken,
 		&CustomClaims{},
@@ -195,7 +187,7 @@ func (s *AuthServiceImpl) ValidateToken(
 			return nil, ErrExpiredToken
 		}
 
-		return &service.TokenClaims{
+		return &TokenClaims{
 			UserID:    claims.UserID,
 			Username:  claims.Username,
 			ExpiresAt: claims.ExpiresAt.Time,
