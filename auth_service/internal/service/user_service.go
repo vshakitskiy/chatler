@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"auth.service/internal/repository"
-	"golang.org/x/crypto/bcrypt"
+	"auth.service/pkg"
 )
 
 type UserServiceImpl struct {
@@ -36,7 +36,7 @@ func (s *UserServiceImpl) CreateUser(
 		return "", ErrUserAlreadyExists
 	}
 
-	hashedPassword, err := hashPassword(password)
+	hashedPassword, err := pkg.HashPassword(password)
 	if err != nil {
 		return "", fmt.Errorf("failed to hash password: %w", err)
 	}
@@ -106,7 +106,7 @@ func (s *UserServiceImpl) UpdateUser(
 	}
 
 	if password != "" {
-		hashedPassword, err := hashPassword(password)
+		hashedPassword, err := pkg.HashPassword(password)
 		if err != nil {
 			return fmt.Errorf("failed to hash password: %w", err)
 		}
@@ -131,9 +131,4 @@ func (s *UserServiceImpl) DeleteUser(ctx context.Context, userID string) error {
 	}
 
 	return nil
-}
-
-func hashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	return string(bytes), err
 }

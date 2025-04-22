@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -11,8 +12,11 @@ import (
 
 	pb "auth.service/api/proto"
 	"auth.service/internal/api/handlers"
+	"auth.service/internal/config"
 	"auth.service/internal/repository"
+	"auth.service/internal/repository/sqlite"
 	"auth.service/internal/service"
+	"github.com/jmoiron/sqlx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -26,15 +30,22 @@ type App struct {
 
 func NewApp(
 	ctx context.Context,
-	userRepo repository.UserRepository,
-	sessionRepo repository.SessionRepository,
-) *App {
-	port := getEnv("GRPC_PORT", "50051")
-
-	return &App{
-		userRepo:    userRepo,
-		sessionRepo: sessionRepo,
-		port:        port,
+	db *sqlx.DB,
+) (*App, error) {
+	switch db.DriverName() {
+	case "sqlite3":
+		userRepo := sqlite.NewUserRepository(db)
+		sessionRepo := sqlite.NewSessionRepository(db)
+		return &App{
+			userRepo:    userRepo,
+			sessionRepo: sessionRepo,
+			port:        config.Env.GRPCPort,
+		}, nil
+	default:
+		return nil, fmt.Errorf(
+			"unsupported database driver: %s",
+			db.DriverName(),
+		)
 	}
 }
 
@@ -96,12 +107,4 @@ func (a *App) GracefulShutdown(ctx context.Context) error {
 	log.Println("gRPC server stopped")
 
 	return nil
-}
-
-func getEnv(key, defaultValue string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-
-	return defaultValue
 }

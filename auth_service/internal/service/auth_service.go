@@ -3,14 +3,14 @@ package service
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
 	"time"
 
+	"auth.service/internal/config"
 	"auth.service/internal/repository"
+	"auth.service/pkg"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type CustomClaims struct {
@@ -37,16 +37,9 @@ func NewAuthService(
 	return &AuthServiceImpl{
 		userRepo:    userRepo,
 		sessionRepo: sessionRepo,
-		// TODO: DEFAULT SECRET
-		jwtSecret: []byte(getEnv("JWT_SECRET_KEY", "asdasdasdasdasdas")),
-		accessTTL: parseDuration(getEnv(
-			"ACCESS_TOKEN_TTL",
-			"15m",
-		)),
-		refreshTTL: parseDuration(getEnv(
-			"REFRESH_TOKEN_TTL",
-			"24h",
-		)),
+		jwtSecret:   []byte(config.Env.JWTSecret),
+		accessTTL:   parseDuration(config.Env.AccessTokenTTL),
+		refreshTTL:  parseDuration(config.Env.RefreshTokenTTL),
 	}
 }
 
@@ -64,7 +57,7 @@ func (s *AuthServiceImpl) Login(
 		return nil, ErrInvalidToken
 	}
 
-	if !checkPasswordHash(password, user.PasswordHash) {
+	if !pkg.CheckPasswordHash(password, user.PasswordHash) {
 		return nil, ErrInvalidCredentials
 	}
 
@@ -198,14 +191,6 @@ func (s *AuthServiceImpl) ValidateToken(
 	return nil, ErrInvalidToken
 }
 
-func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-
-	return defaultValue
-}
-
 func parseDuration(value string) time.Duration {
 	duration, err := time.ParseDuration(value)
 	if err != nil {
@@ -216,9 +201,4 @@ func parseDuration(value string) time.Duration {
 	}
 
 	return duration
-}
-
-func checkPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
 }
